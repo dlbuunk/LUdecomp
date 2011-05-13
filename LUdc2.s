@@ -68,32 +68,81 @@ setup_b:
 	movq	%rax,(%rsi)
 	addq	$0x8,%rsi
 	addq	%rbx,%rax
-	decq	%rdx
+	decq	%rcx
 	jrcxz	setup_end
 
 	movq	%rax,(%rsi)
 	addq	$0x8,%rsi
 	addq	%rbx,%rax
-	decq	%rdx
+	decq	%rcx
 	jrcxz	setup_end
 
 	movq	%rax,(%rsi)
 	addq	$0x8,%rsi
 	addq	%rbx,%rax
-	decq	%rdx
+	decq	%rcx
 	jrcxz	setup_end
 
 	movq	%rax,(%rsi)
 	addq	$0x8,%rsi
 	addq	%rbx,%rax
-	decq	%rdx
 	loop	setup_b
 setup_end:
 	# okay, setup is done, now we can setup the outer loop
+	xorq	%rax,%rax
+	xorq	%rbx,%rbx
+	# than, jump to pivoting, as we can skip the beta loop for the first col
+	jmp	pivoting
+outer_loop:
+
+	# inside it there is the beta loop, the pivoting, and the alpha loop
+	xorq	%rbx,%rbx
+beta_loop:
+
+	# get the pointers for the dot-product
+	movq	%rbx,%rcx
+	shlq	$3,%rcx
+	addq	%r8,%rcx
+	movq	(%rcx),%rdi
+
+	movq	%rax,%rcx
+	shlq	$3,%rcx
+	addq	%r9,%rcx
+	movq	(%rcx),%rsi
+
+	# inside the beta loop, there is an inner loop for the dot-product
+	movq	%rax,%rcx
+inner_loop:
+	
 
 
 
 
+
+
+
+
+	# end of beta loop
+	incq	%rbx
+	cmpq	%rbx,%rax
+	jne	beta_loop
+
+pivoting:	# now, this only calculates the Bjj values.
+
+
+alpha_loop:
+
+	# end of alpha loop
+	incq	%rbx
+	cmpq	%rbx,%rdx
+	jne	alpha_loop
+
+	# end of outer loop
+	incq	%rax
+	cmpq	%rax,%rdx
+	jne	outer_loop
+
+	# return to calling function
 	movq	%r8,%rax
 
 	addq	$0x10,%rsp
