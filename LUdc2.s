@@ -5,7 +5,6 @@
 	.global LUdecomp2
 LUdecomp2:
 	# save registers
-#	pushq	%rax
 	pushq	%rbx
 	pushq	%rcx
 	pushq	%rdx
@@ -15,16 +14,9 @@ LUdecomp2:
 	pushq	%r10
 	pushq	%r11
 
-	pushq	%r12
-	pushq	%r13
-	pushq	%r14
-	pushq	%r15
-
 	pushq	%rsi
 	pushq	%rdi
 	pushq	%rbp
-	# make temp space below stack
-	subq	$0x10,%rsp 	# 0x18 bytes, as to preserve alignment.
 
 	# set up variables in their proper registers
 	movq	%rdx,%rbp	# * permutations
@@ -339,7 +331,105 @@ end_pivot:
 	xchgl	(%rdi),%ecx
 	movl	%ecx,(%rsi)
 
+	# store the value to both arrays
+	# as always, first get the pointers
+	movq	%rbx,%rcx
+	shlq	$3,%rcx
+	addq	%r8,%rcx
+	movq	(%rcx),%rdi
+	movq	%rax,%rcx
+	shlq	$2,%rcx
+	addq	%rcx,%rdi
+	movss	%xmm3,(%rdi)
+	movq	%rax,%rcx
+	shlq	$3,%rcx
+	addq	%r8,%rcx
+	movq	(%rcx),%rsi
+	movq	%rbx,%rcx
+	shlq	$2,%rcx
+	addq	%rcx,%rsi
+	movss	%xmm3,(%rsi)
+
 alpha_loop:
+
+	# get the pointers for the dot-product
+	movq	%rbx,%rcx
+	shlq	$3,%rcx
+	addq	%r8,%rcx
+	movq	(%rcx),%rdi
+
+	movq	%rax,%rcx
+	shlq	$3,%rcx
+	addq	%r9,%rcx
+	movq	(%rcx),%rsi
+
+	# clear xmm0
+	xorps	%xmm0,%xmm0
+
+	movq	%rax,%rcx
+inner_loop_b:
+	cmpq	$4,%rcx
+	jb	inner_b_almost
+
+	# multiply and add
+	movaps	(%rdi),%xmm1
+	movaps	(%rsi),%xmm2
+	mulps	%xmm2,%xmm1
+	addq	$0x10,%rdi
+	addq	$0x10,%rsi
+	addps	%xmm1,%xmm0
+
+	subq	$4,%rcx
+	jmp	inner_loop_b
+
+inner_b_almost:
+	jrcxz	inner_b_0
+
+	# 3/2/1 left
+	xorps	%xmm1,%xmm1
+	xorps	%xmm2,%xmm2
+	movss	(%rdi),%xmm1
+	movss	(%rsi),%xmm2
+	decq	%rcx
+	jrcxz	inner_b_end
+
+	# 2/1 left
+	pslldq	$4,%xmm1
+	pslldq	$4,%xmm2
+	addq	$0x4,%rdi
+	addq	$0x4,%rsi
+	movss	(%rdi),%xmm1
+	movss	(%rsi),%xmm2
+	decq	%rcx
+	jrcxz	inner_b_end
+
+	# 1 left
+	pslldq	$4,%xmm1
+	pslldq	$4,%xmm2
+	addq	$0x4,%rdi
+	addq	$0x4,%rsi
+	movss	(%rdi),%xmm1
+	movss	(%rsi),%xmm2
+
+inner_b_end:
+	addq	$0x4,%rdi
+	mulps	%xmm2,%xmm1
+	addps	%xmm1,%xmm0
+
+inner_b_0:
+	# final add
+	movaps	%xmm0,%xmm1
+	psrldq	$8,%xmm1
+	addps	%xmm1,%xmm0
+	movaps	%xmm0,%xmm1
+	psrldq	$4,%xmm1
+	addss	%xmm1,%xmm0
+
+	# get the "a" value and substract and divide
+	movss	(%rdi),%xmm1
+	subss	%xmm0,%xmm1
+	divss	%xmm3,%xmm1
+	movss	%xmm1,(%rdi)
 
 	# end of alpha loop
 	incq	%rbx
@@ -352,17 +442,10 @@ alpha_loop:
 	jne	outer_loop
 
 	# return to calling function
-	movq	%r8,%rax
-end:
-	addq	$0x10,%rsp
+
 	popq	%rbp
 	popq	%rdi
 	popq	%rsi
-
-	popq	%r15
-	popq	%r14
-	popq	%r13
-	popq	%r12
 
 	popq	%r11
 	popq	%r10
@@ -372,6 +455,5 @@ end:
 	popq	%rdx
 	popq	%rcx
 	popq	%rbx
-#	popq	%rax
 
 	ret
