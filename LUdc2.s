@@ -139,30 +139,29 @@ inner_a_almost:
 	xorps	%xmm2,%xmm2
 	movss	(%rdi),%xmm1
 	movss	(%rsi),%xmm2
-	addq	$0x4,%rdi
-	addq	$0x4,%rsi
 	decq	%rcx
 	jrcxz	inner_a_end
 
 	# 2/1 left
 	pslldq	$4,%xmm1
 	pslldq	$4,%xmm2
+	addq	$0x4,%rdi
+	addq	$0x4,%rsi
 	movss	(%rdi),%xmm1
 	movss	(%rsi),%xmm2
-	addq	$0x04,%rdi
-	addq	$0x04,%rsi
 	decq	%rcx
 	jrcxz	inner_a_end
 
 	# 1 left
 	pslldq	$4,%xmm1
 	pslldq	$4,%xmm2
-	movss	(%rdi),%xmm1
-	movss	(%rsi),%xmm2
 	addq	$0x04,%rdi
 	addq	$0x04,%rsi
+	movss	(%rdi),%xmm1
+	movss	(%rsi),%xmm2
 
 inner_a_end:
+	addq	$0x04,%rsi
 	mulps	%xmm2,%xmm1
 	addps	%xmm1,%xmm0
 
@@ -196,7 +195,133 @@ inner_a_0:
 	cmpq	%rbx,%rax
 	jne	beta_loop
 
-pivoting:	# now, this only calculates the Bjj values.
+pivoting:
+	# pivoting runs from k=i to k=N
+	# r10 is current, r11 is best, rcx is counter
+	# xmm3[0:31] is the best val
+	movq	$-1,%r11
+	movq	%rbx,%r10
+	xorps	%xmm3,%xmm3
+
+pivot_loop:
+	# get the pointers to the matrices
+
+	movq	%rax,%rcx
+	shlq	$3,%rcx
+	addq	%r9,%rcx
+	movq	(%rcx),%rsi
+
+	movq	%r10,%rcx
+	shlq	$3,%rcx
+	addq	%r8,%rcx
+	movq	(%rcx),%rdi
+
+	# clear xmm0
+	xorps	%xmm0,%xmm0
+
+	# inner loop
+	movq	%rdx,%rcx
+	subq	%rbx,%rcx
+inner_loop_p:
+	cmpq	$4,%rcx
+	jb	inner_p_almost
+
+	# mul and add 4 floats
+	movaps	(%rdi),%xmm1
+	movaps	(%rsi),%xmm2
+	mulps	%xmm2,%xmm1
+	addq	$0x10,%rdi
+	addq	$0x10,%rsi
+	addps	%xmm1,%xmm0
+
+	subq	$4,%rcx
+	jmp	inner_loop_p
+
+inner_p_almost:
+	jrcxz	inner_p_0
+
+	# 3/2/1 left
+	xorps	%xmm1,%xmm1
+	xorps	%xmm2,%xmm2
+	movss	(%rdi),%xmm1
+	movss	(%rsi),%xmm2
+	decq	%rcx
+	jrcxz	inner_p_end
+
+	# 2/1 left
+	pslldq	$4,%xmm1
+	pslldq	$4,%xmm2
+	addq	$0x04,%rdi
+	addq	$0x04,%rsi
+	movss	(%rdi),%xmm1
+	movss	(%rsi),%xmm2
+	decq	%rcx
+	jrcxz	inner_p_end
+
+	# 1 left
+	pslldq	$4,%xmm1
+	pslldq	$4,%xmm2
+	addq	$0x04,%rdi
+	addq	$0x04,%rsi
+	movss	(%rdi),%xmm1
+	movss	(%rsi),%xmm2
+
+inner_p_end:
+	mulps	%xmm2,%xmm1
+	addps	%xmm1,%xmm0
+
+inner_p_0:
+	# final add
+	movaps	%xmm0,%xmm1
+	psrldq	$8,%xmm1
+	addps	%xmm1,%xmm0
+	movaps	%xmm0,%xmm1
+	psrldq	$4,%xmm1
+	addss	%xmm1,%xmm0
+
+	# get the "a" val and substract
+	# pointer first, can use %rcx
+	movq	%rbx,%rcx
+	shlq	$3,%rcx
+	addq	%r8,%rcx
+	movq	(%rcx),%rdi
+	movq	%rax,%rcx
+	shlq	$2,%rcx
+	addq	%rcx,%rdi
+	movss	(%rdi),%xmm1
+	subss	%xmm0,%xmm1
+
+	# absolute value
+	
+	movl	$0x80000000,%eax
+	pushl	%e
+	movss	(%rsp),%xmm0
+	popl	%eax
+	por	
+
+
+
+
+
+
+
+
+
+
+
+
+
+end_pivot:
+
+	# end of pivot loop
+	incq	%r10
+	cmpq	%r10,%rdx
+	jne	pivot_loop
+
+
+
+
+
 
 
 alpha_loop:
