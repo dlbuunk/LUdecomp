@@ -36,7 +36,7 @@ LUdecomp2:
 	movq	%rbp,%rbx	# * permutations
 setup_perm:
 	movq	%rax,(%rbx)
-	addq	$0x8,%rbx
+	addq	$0x4,%rbx
 	incq	%rax
 	loop	setup_perm
 
@@ -280,8 +280,8 @@ inner_p_0:
 	addss	%xmm1,%xmm0
 
 	# get the "a" val and substract
-	# pointer first, can use %rcx
-	movq	%rbx,%rcx
+	# find the pointer first
+	movq	%r10,%rcx
 	shlq	$3,%rcx
 	addq	%r8,%rcx
 	movq	(%rcx),%rdi
@@ -292,37 +292,52 @@ inner_p_0:
 	subss	%xmm0,%xmm1
 
 	# absolute value
-	
-	movl	$0x80000000,%eax
-	pushl	%e
+	xorps	%xmm0,%xmm0
+	movq	$0x7FFFFFFF,%rcx
+	pushq	%rcx
 	movss	(%rsp),%xmm0
-	popl	%eax
-	por	
+	popq	%rcx
+	pand	%xmm0,%xmm1
 
+	# get maximal value
+	movss	%xmm3,%xmm0
+	subss	%xmm1,%xmm0
+	movmskps %xmm0,%rcx
+	andq	$1,%rcx
+	cmpq	$1,%rcx
+	jne	end_pivot
 
-
-
-
-
-
-
-
-
-
-
+	# store max val and index
+	movss	%xmm1,%xmm3
+	movq	%r10,%r11
 
 end_pivot:
-
 	# end of pivot loop
 	incq	%r10
 	cmpq	%r10,%rdx
 	jne	pivot_loop
 
+	# swap pointers
+	movq	%rbx,%rdi
+	movq	%r11,%rsi
+	shlq	$3,%rdi
+	shlq	$3,%rsi
+	addq	%r8,%rdi
+	addq	%r8,%rsi
+	movq	(%rsi),%rcx
+	xchgq	(%rdi),%rcx
+	movq	%rcx,(%rsi)
 
-
-
-
-
+	# swap indices in perm-array
+	movq	%rbx,%rdi
+	movq	%r11,%rsi
+	shlq	$2,%rdi
+	shlq	$2,%rsi
+	addq	%rbp,%rdi
+	addq	%rbp,%rsi
+	movl	(%rsi),%ecx
+	xchgl	(%rdi),%ecx
+	movl	%ecx,(%rsi)
 
 alpha_loop:
 

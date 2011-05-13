@@ -19,17 +19,13 @@ int main()
 	M[1][0] = 5.0;
 	M[1][1] = 5.0;
 	M[1][2] = 2.0;
-	M[2][0] = 4.0;
+	M[2][0] = 6.0;
 	M[2][1] = 3.0;
 	M[2][2] = 9.0;
 
 	pM = LUdecomp2(&M[0][0], &T[0], &perm[0], 3);
 
-	printf("%lX\n", (long int) pM);
-
-	printf("%f\n", *((float *) pM));
-
-//	for (i=0; i<3; i++) printf("%f\t%f\t%f\n", pM[i][0], pM[i][1], pM[i][2]);
+	for (i=0; i<3; i++) printf("%d\t%f\t%f\t%f\n", perm[i], pM[i][0], pM[i][1], pM[i][2]);
 
 	return(0);
 }
