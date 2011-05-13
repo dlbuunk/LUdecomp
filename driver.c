@@ -38,9 +38,9 @@ int main()
 
 	puts("New version:");
 
-	LUdecomp(M, W, perm, 3);
+	LUdecomp2(&M[0][0], &W[0], &perm[0], 3);
 
-//	for (i=0; i<3; i++) printf("%d\t%f\t%f\t%f\n", perm[i], M[i][0], M[i][1], M[i][2]);
+	for (i=0; i<3; i++) printf("%d\t%f\t%f\t%f\n", perm[i], M[i][0], M[i][1], M[i][2]);
 
 	return(0);
 }

@@ -442,7 +442,7 @@ inner_b_0:
 	jne	outer_loop
 
 	# return to calling function
-
+end:
 	popq	%rbp
 	popq	%rdi
 	popq	%rsi
